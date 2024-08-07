@@ -1,0 +1,11 @@
+terraform {
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = ">=5.39.0"
+    }
+  }
+}
+
+data "google_project" "current" {
+}
