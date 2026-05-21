@@ -10,6 +10,7 @@ resource "google_compute_forwarding_rule" "forwarding_rule" {
   load_balancing_scheme  = var.load_balancing_scheme
   backend_service        = google_compute_region_backend_service.lb_backend.self_link
   ports                  = var.ports
+  port_range             = var.port_range
   region                 = var.region
   ip_address             = var.reserve_ip_address ? google_compute_address.lb_address[0].address : var.ip_address
   ip_protocol            = var.ip_protocol
