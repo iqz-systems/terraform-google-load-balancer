@@ -1,3 +1,8 @@
+locals {
+  # A forwarding rule accepts at most 5 ports; ports beyond the first 5 go to forwarding_rule_extra.
+  port_chunks = chunklist(var.ports, 5)
+}
+
 resource "google_compute_forwarding_rule" "forwarding_rule" {
   provider               = google-beta
   project                = var.project_id
@@ -9,7 +14,7 @@ resource "google_compute_forwarding_rule" "forwarding_rule" {
   subnetwork             = var.load_balancing_scheme == "INTERNAL" ? var.subnetwork : null
   load_balancing_scheme  = var.load_balancing_scheme
   backend_service        = google_compute_region_backend_service.lb_backend.self_link
-  ports                  = var.ports
+  ports                  = local.port_chunks[0]
   region                 = var.region
   ip_address             = var.reserve_ip_address ? google_compute_address.lb_address[0].address : var.ip_address
   ip_protocol            = var.ip_protocol
@@ -20,6 +25,32 @@ resource "google_compute_forwarding_rule" "forwarding_rule" {
     content {
       namespace = service_directory_registrations.value["namespace"]
       service   = service_directory_registrations.value["service"]
+    }
+  }
+}
+
+# Carries the ports beyond the first 5 on the same IP address and backend service as forwarding_rule.
+resource "google_compute_forwarding_rule" "forwarding_rule_extra" {
+  count                  = length(local.port_chunks) - 1
+  provider               = google-beta
+  project                = var.project_id
+  name                   = "forwarding-rule-${var.env}-${var.service_name}-${count.index + 2}"
+  description            = var.description
+  allow_global_access    = var.allow_global_access
+  network_tier           = var.network_tier
+  load_balancing_scheme  = var.load_balancing_scheme
+  backend_service        = google_compute_region_backend_service.lb_backend.self_link
+  ports                  = local.port_chunks[count.index + 1]
+  region                 = var.region
+  ip_address             = google_compute_forwarding_rule.forwarding_rule.ip_address
+  ip_protocol            = var.ip_protocol
+  is_mirroring_collector = var.is_mirroring_collector
+
+  lifecycle {
+    precondition {
+      # Internal forwarding rules can only share an IP whose address has purpose SHARED_LOADBALANCER_VIP, which this module does not set.
+      condition     = var.load_balancing_scheme == "EXTERNAL"
+      error_message = "More than 5 ports is only supported when load_balancing_scheme is EXTERNAL."
     }
   }
 }

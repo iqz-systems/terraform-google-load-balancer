@@ -52,7 +52,12 @@ variable "allow_global_access" {
 variable "ports" {
   type        = list(string)
   default     = ["80"]
-  description = "Only packets addressed to these ports will be forwarded to the backends configured with this forwarding rule."
+  description = "Only packets addressed to these ports will be forwarded to the backends. More than 5 ports are split into groups of 5, each on its own forwarding rule sharing the same IP (EXTERNAL only). Append new ports at the end: reordering moves ports between rules and replaces them."
+
+  validation {
+    condition     = length(var.ports) > 0
+    error_message = "ports must contain at least one port."
+  }
 }
 
 variable "protocol" {

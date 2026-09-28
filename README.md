@@ -9,7 +9,7 @@ This module uses the [google](https://registry.terraform.io/providers/hashicorp/
 ```hcl
 module "load_balancer" {
   source            = "iqz-systems/load-balancer/google"
-  version           = "1.0.0"
+  version           = "1.1.0"
 
   project_id          = "my_project"
   region              = "us-east1"
@@ -67,3 +67,28 @@ module "load_balancer" {
   session_affinity = "CLIENT_IP"
 }
 ```
+
+## More than 5 ports
+
+A forwarding rule accepts at most 5 ports. When `ports` holds more, the module splits it into groups of 5: the first group goes to the primary forwarding rule, and each later group gets an extra forwarding rule (`forwarding-rule-<env>-<service_name>-2`, `-3`, ...) on the same IP address and backend service. This is supported only for `load_balancing_scheme = "EXTERNAL"`; an internal load balancer with more than 5 ports fails at plan time.
+
+Append new ports to the end of the list. Reordering moves ports between groups, which replaces the affected forwarding rules.
+
+## Outputs
+
+| Name | Description |
+| --- | --- |
+| `forwarding_rule` | Self link of the primary forwarding rule |
+| `forwarding_rules` | Self links of all forwarding rules, the primary rule first |
+| `load_balancer_ip` | IP address of the load balancer |
+| `load_balancer_domain_name` | The domain name for the load balancer |
+| `backend_service` | Self link of the regional backend service |
+
+## Testing
+
+```bash
+terraform init -backend=false
+terraform test
+```
+
+The tests use mocked providers and need no GCP credentials.
