@@ -21,6 +21,7 @@ resource "google_compute_forwarding_rule" "forwarding_rule" {
   ip_protocol            = var.ip_protocol
   service_label          = var.service_label
   is_mirroring_collector = var.is_mirroring_collector
+  labels                 = var.labels
   dynamic "service_directory_registrations" {
     for_each = var.service_directory_registrations != null ? [var.service_directory_registrations] : []
     content {
@@ -53,6 +54,7 @@ resource "google_compute_forwarding_rule" "forwarding_rule_extra" {
   ip_address             = google_compute_forwarding_rule.forwarding_rule.ip_address
   ip_protocol            = var.ip_protocol
   is_mirroring_collector = var.is_mirroring_collector
+  labels                 = var.labels
 
   lifecycle {
     precondition {
@@ -70,6 +72,7 @@ resource "google_compute_address" "lb_address" {
   address_type = var.address_type
   project      = var.project_id
   region       = var.region
+  labels       = var.labels
 }
 
 resource "google_compute_region_backend_service" "lb_backend" {

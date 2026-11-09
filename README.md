@@ -82,6 +82,10 @@ A passthrough load balancer preserves the client source address, so the backends
 
 Switching an existing load balancer from `ports` to `all_ports` replaces the primary forwarding rule: the rule is deleted and then created again on the same address. Rules on one address cannot overlap in ports. The module removes its own extra forwarding rules before it replaces the primary rule. Any forwarding rule on that address that this module did not create must be removed in an earlier apply.
 
+## Labels
+
+Set `labels` to a map of label keys and values to apply them to every forwarding rule and to the reserved IP address, for example to identify the application and environment in cost reports. The backend service and the health check do not support labels. Adding or changing labels updates the resources in place.
+
 ## Outputs
 
 | Name | Description |

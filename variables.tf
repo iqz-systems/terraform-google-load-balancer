@@ -7,6 +7,12 @@ variable "description" {
   default     = null
 }
 
+variable "labels" {
+  type        = map(string)
+  default     = {}
+  description = "Labels applied to every forwarding rule and to the reserved IP address, for example for cost reporting. The backend service and health check do not support labels. Changing labels updates the resources in place."
+}
+
 variable "region" {
   description = "All resources will be launched in this region"
 }
