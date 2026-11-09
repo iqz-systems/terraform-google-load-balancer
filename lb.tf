@@ -1,6 +1,6 @@
 locals {
-  # A forwarding rule accepts at most 5 ports; ports beyond the first 5 go to forwarding_rule_extra.
-  port_chunks = chunklist(var.ports, 5)
+  # A forwarding rule accepts at most 5 ports; ports beyond the first 5 go to forwarding_rule_extra. With all_ports there is a single rule and no port list.
+  port_chunks = var.all_ports ? [] : chunklist(var.ports, 5)
 }
 
 resource "google_compute_forwarding_rule" "forwarding_rule" {
@@ -14,7 +14,8 @@ resource "google_compute_forwarding_rule" "forwarding_rule" {
   subnetwork             = var.load_balancing_scheme == "INTERNAL" ? var.subnetwork : null
   load_balancing_scheme  = var.load_balancing_scheme
   backend_service        = google_compute_region_backend_service.lb_backend.self_link
-  ports                  = local.port_chunks[0]
+  ports                  = var.all_ports ? null : local.port_chunks[0]
+  all_ports              = var.all_ports ? true : null
   region                 = var.region
   ip_address             = var.reserve_ip_address ? google_compute_address.lb_address[0].address : var.ip_address
   ip_protocol            = var.ip_protocol
@@ -27,11 +28,18 @@ resource "google_compute_forwarding_rule" "forwarding_rule" {
       service   = service_directory_registrations.value["service"]
     }
   }
+
+  lifecycle {
+    precondition {
+      condition     = !var.all_ports || (contains(["INTERNAL", "EXTERNAL"], var.load_balancing_scheme) && contains(["TCP", "UDP", "SCTP", "L3_DEFAULT"], var.ip_protocol))
+      error_message = "all_ports requires load_balancing_scheme INTERNAL or EXTERNAL and ip_protocol TCP, UDP, SCTP or L3_DEFAULT."
+    }
+  }
 }
 
 # Carries the ports beyond the first 5 on the same IP address and backend service as forwarding_rule.
 resource "google_compute_forwarding_rule" "forwarding_rule_extra" {
-  count                  = length(local.port_chunks) - 1
+  count                  = max(length(local.port_chunks) - 1, 0)
   provider               = google-beta
   project                = var.project_id
   name                   = "forwarding-rule-${var.env}-${var.service_name}-${count.index + 2}"

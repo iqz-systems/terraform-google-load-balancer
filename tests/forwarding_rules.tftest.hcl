@@ -137,3 +137,85 @@ run "empty_ports_are_rejected" {
     var.ports,
   ]
 }
+
+run "all_ports_defaults_to_false" {
+  command = plan
+
+  variables {
+    ports = ["1", "2", "3", "4", "5"]
+  }
+
+  assert {
+    condition     = google_compute_forwarding_rule.forwarding_rule.all_ports != true
+    error_message = "all_ports should not be set unless requested."
+  }
+}
+
+run "all_ports_uses_a_single_rule_without_ports" {
+  command = apply
+
+  variables {
+    all_ports = true
+    ports     = []
+  }
+
+  assert {
+    condition     = google_compute_forwarding_rule.forwarding_rule.all_ports == true
+    error_message = "The primary rule should forward all ports."
+  }
+
+  assert {
+    condition     = length(coalesce(google_compute_forwarding_rule.forwarding_rule.ports, toset([]))) == 0
+    error_message = "The primary rule should carry no port list when all_ports is set."
+  }
+
+  assert {
+    condition     = length(google_compute_forwarding_rule.forwarding_rule_extra) == 0
+    error_message = "No extra rules should be created when all_ports is set."
+  }
+
+  assert {
+    condition     = output.forwarding_rules == [google_compute_forwarding_rule.forwarding_rule.self_link]
+    error_message = "forwarding_rules should list only the primary rule."
+  }
+}
+
+run "all_ports_ignores_more_than_five_ports" {
+  command = apply
+
+  variables {
+    all_ports = true
+    ports     = ["1", "2", "3", "4", "5", "6"]
+  }
+
+  assert {
+    condition     = google_compute_forwarding_rule.forwarding_rule.all_ports == true && length(google_compute_forwarding_rule.forwarding_rule_extra) == 0
+    error_message = "all_ports should take precedence over ports and create no extra rules."
+  }
+}
+
+run "all_ports_rejects_an_unsupported_protocol" {
+  command = plan
+
+  variables {
+    all_ports   = true
+    ip_protocol = "ICMP"
+  }
+
+  expect_failures = [
+    google_compute_forwarding_rule.forwarding_rule,
+  ]
+}
+
+run "all_ports_rejects_a_managed_scheme" {
+  command = plan
+
+  variables {
+    all_ports             = true
+    load_balancing_scheme = "EXTERNAL_MANAGED"
+  }
+
+  expect_failures = [
+    google_compute_forwarding_rule.forwarding_rule,
+  ]
+}
