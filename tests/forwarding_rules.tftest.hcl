@@ -207,6 +207,58 @@ run "all_ports_rejects_an_unsupported_protocol" {
   ]
 }
 
+run "labels_default_to_none" {
+  command = plan
+
+  variables {
+    ports = ["1", "2", "3", "4", "5", "6"]
+  }
+
+  assert {
+    condition     = length(coalesce(google_compute_forwarding_rule.forwarding_rule.labels, {})) == 0 && length(coalesce(google_compute_forwarding_rule.forwarding_rule_extra[0].labels, {})) == 0 && length(coalesce(google_compute_address.lb_address[0].labels, {})) == 0
+    error_message = "No labels should be set unless requested."
+  }
+}
+
+run "labels_apply_to_every_forwarding_rule_and_the_address" {
+  command = apply
+
+  variables {
+    ports  = ["1", "2", "3", "4", "5", "6"]
+    labels = { app = "denodo", environment = "dev" }
+  }
+
+  assert {
+    condition     = google_compute_forwarding_rule.forwarding_rule.labels == tomap({ app = "denodo", environment = "dev" })
+    error_message = "The primary rule should carry the labels."
+  }
+
+  assert {
+    condition     = google_compute_forwarding_rule.forwarding_rule_extra[0].labels == tomap({ app = "denodo", environment = "dev" })
+    error_message = "Extra rules should carry the labels."
+  }
+
+  assert {
+    condition     = google_compute_address.lb_address[0].labels == tomap({ app = "denodo", environment = "dev" })
+    error_message = "The reserved address should carry the labels."
+  }
+}
+
+run "labels_apply_to_an_all_ports_rule" {
+  command = apply
+
+  variables {
+    all_ports = true
+    ports     = []
+    labels    = { app = "denodo", environment = "prod" }
+  }
+
+  assert {
+    condition     = google_compute_forwarding_rule.forwarding_rule.labels == tomap({ app = "denodo", environment = "prod" })
+    error_message = "The all-ports rule should carry the labels."
+  }
+}
+
 run "all_ports_rejects_a_managed_scheme" {
   command = plan
 
