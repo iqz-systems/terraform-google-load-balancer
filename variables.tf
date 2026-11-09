@@ -55,9 +55,15 @@ variable "ports" {
   description = "Only packets addressed to these ports will be forwarded to the backends. More than 5 ports are split into groups of 5, each on its own forwarding rule sharing the same IP (EXTERNAL only). Append new ports at the end: reordering moves ports between rules and replaces them."
 
   validation {
-    condition     = length(var.ports) > 0
-    error_message = "ports must contain at least one port."
+    condition     = var.all_ports || length(var.ports) > 0
+    error_message = "ports must contain at least one port unless all_ports is true."
   }
+}
+
+variable "all_ports" {
+  type        = bool
+  default     = false
+  description = "Forward every port of ip_protocol to the backends on a single forwarding rule. When true, ports is ignored and no extra forwarding rules are created. Supported for INTERNAL and EXTERNAL passthrough load balancers with ip_protocol TCP, UDP, SCTP or L3_DEFAULT. Switching an existing rule between ports and all_ports replaces it."
 }
 
 variable "protocol" {

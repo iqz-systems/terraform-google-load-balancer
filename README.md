@@ -74,6 +74,14 @@ A forwarding rule accepts at most 5 ports. When `ports` holds more, the module s
 
 Append new ports to the end of the list. Reordering moves ports between groups, which replaces the affected forwarding rules.
 
+## All ports
+
+Set `all_ports = true` to forward every port of `ip_protocol` to the backends through a single forwarding rule. The module then ignores `ports`, which may be empty, and creates no extra forwarding rules. This is supported for `load_balancing_scheme` `INTERNAL` or `EXTERNAL` with `ip_protocol` `TCP`, `UDP`, `SCTP` or `L3_DEFAULT`; any other combination fails at plan time.
+
+A passthrough load balancer preserves the client source address, so the backends' firewall rules decide which ports are reachable. Every port the firewall admits on the backend VMs becomes reachable on the load balancer address.
+
+Switching an existing load balancer from `ports` to `all_ports` replaces the primary forwarding rule: the rule is deleted and then created again on the same address. Rules on one address cannot overlap in ports. The module removes its own extra forwarding rules before it replaces the primary rule. Any forwarding rule on that address that this module did not create must be removed in an earlier apply.
+
 ## Outputs
 
 | Name | Description |
